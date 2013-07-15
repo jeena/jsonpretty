@@ -1,0 +1,60 @@
+#!/usr/bin/env python2
+
+import sys, os, json
+from PyQt4 import QtGui, QtCore
+
+settings = QtCore.QSettings("net.jeena", "jsonpretty")
+
+
+class MainWindow(QtGui.QMainWindow):
+	def __init__(self):
+		QtGui.QMainWindow.__init__(self)
+		self.addAction(QtGui.QAction("Full Screen", self, checkable=True, toggled=lambda v: self.showFullScreen() if v else self.showNormal(), shortcut="F11"))
+		self.restoreGeometry(QtCore.QByteArray.fromRawData(settings.value("geometry").toByteArray()))
+		self.restoreState(QtCore.QByteArray.fromRawData(settings.value("state").toByteArray()))
+
+		self.textInput = QtGui.QPlainTextEdit(self)
+		self.textInput.setLineWrapMode(QtGui.QPlainTextEdit.NoWrap)
+		self.textInput.setFont(QtGui.QFont("Monospace"))
+		self.setCentralWidget(self.textInput)
+
+		runAction = QtGui.QAction("&Prittyfy", self)
+		runAction.setShortcut("Ctrl+P")
+		runAction.setStatusTip("Prittyfy")
+		runAction.triggered.connect(self.prettyfy)
+
+		exitAction = QtGui.QAction("&Exit", self)
+		exitAction.setShortcut("Ctrl+Q")
+		exitAction.setStatusTip("Exit jsonpretty")
+		exitAction.triggered.connect(QtGui.qApp.quit)
+
+		menubar = self.menuBar()
+		fileMenu = menubar.addMenu("&File")
+		fileMenu.addAction(runAction)
+		fileMenu.addAction(exitAction)
+
+	def closeEvent(self, ev):
+		settings.setValue("geometry",  self.saveGeometry())
+		settings.setValue("state", self.saveState())
+		return QtGui.QMainWindow.closeEvent(self, ev)
+
+	def put(self, key, value):
+		"Persist an object somewhere under a given key"
+		settings.setValue(key, json.dumps(value))
+		settings.sync()
+
+	def get(self, key, default=None):
+		"Get the object stored under 'key' in persistent storage, or the default value"
+		v = settings.value(key)
+		return json.loads(unicode(v.toString())) if v.isValid() else default
+
+	def prettyfy(self):
+		j = json.loads(unicode(self.textInput.toPlainText()))
+		s = json.dumps(j, indent=4, separators=(',', ': '))
+		self.textInput.setPlainText(s)
+
+if __name__ == "__main__":
+	app = QtGui.QApplication(sys.argv)
+	wb = MainWindow()
+	wb.show()
+	sys.exit(app.exec_())
