@@ -14,6 +14,7 @@ class MainWindow(QtGui.QMainWindow):
 		self.restoreState(QtCore.QByteArray.fromRawData(settings.value("state").toByteArray()))
 
 		self.textInput = QtGui.QPlainTextEdit(self)
+		self.textInput.textChanged.connect(self.prettyfy)
 		self.textInput.setLineWrapMode(QtGui.QPlainTextEdit.NoWrap)
 		self.textInput.setFont(QtGui.QFont("Monospace"))
 		self.setCentralWidget(self.textInput)
@@ -33,6 +34,8 @@ class MainWindow(QtGui.QMainWindow):
 		fileMenu.addAction(runAction)
 		fileMenu.addAction(exitAction)
 
+		self.manually = True
+
 	def closeEvent(self, ev):
 		settings.setValue("geometry",  self.saveGeometry())
 		settings.setValue("state", self.saveState())
@@ -49,9 +52,17 @@ class MainWindow(QtGui.QMainWindow):
 		return json.loads(unicode(v.toString())) if v.isValid() else default
 
 	def prettyfy(self):
-		j = json.loads(unicode(self.textInput.toPlainText()))
-		s = json.dumps(j, indent=4, separators=(',', ': '))
-		self.textInput.setPlainText(s)
+		if self.manually:
+			try:
+				j = json.loads(unicode(self.textInput.toPlainText()))
+			except ValueError:
+				self.statusBar().showMessage('JSON Syntax Error')
+			else:
+				s = json.dumps(j, indent=4, separators=(',', ': '))
+				self.manually = False
+				self.textInput.setPlainText(s)
+				self.manually = True
+				self.statusBar().showMessage('JSON Ok')
 
 if __name__ == "__main__":
 	app = QtGui.QApplication(sys.argv)
